@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: indico_postgres
+    environment:
+      POSTGRES_USER: indico
+      POSTGRES_PASSWORD: indico
+      POSTGRES_DB: indico
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U indico -d indico"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: indico_backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgres://indico:indico@postgres:5432/indico?sslmode=disable"
+      PORT: "8080"
+      RESERVATION_TTL: "5m"
+      SWEEPER_INTERVAL: "15s"
+      SHUTDOWN_TIMEOUT: "10s"
+      GIN_MODE: "release"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: "http://localhost:8080"
+    container_name: indico_frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
