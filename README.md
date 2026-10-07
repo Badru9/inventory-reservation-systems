@@ -4,21 +4,21 @@ High-concurrency inventory reservation system built with **Go + Gin + PostgreSQL
 
 ## Stack
 
-| Layer | Tech |
-|---|---|
-| Backend | Go 1.25, Gin, pgx/v5, embedded SQL migrations |
-| Database | PostgreSQL 16 |
-| Frontend | React 19, Vite 5, TypeScript 5.8, TanStack Query, axios, HeroUI v3 (Tailwind v4) |
-| Orchestration | Docker Compose — one command spins up the full stack |
+| Layer         | Tech                                                                             |
+| ------------- | -------------------------------------------------------------------------------- |
+| Backend       | Go 1.25, Gin, pgx/v5, embedded SQL migrations                                    |
+| Database      | PostgreSQL 16                                                                    |
+| Frontend      | React 19, Vite 5, TypeScript 5.8, TanStack Query, axios, HeroUI v3 (Tailwind v4) |
+| Orchestration | Docker Compose — one command spins up the full stack                             |
 
 ## Endpoints
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/api/v1/inventory/reserve` | Atomically reserve stock (5-minute TTL) |
-| `POST` | `/api/v1/inventory/confirm` | Commit an active reservation |
-| `GET`  | `/api/v1/inventory/stock?item_id=…` | Real-time stock breakdown |
-| `GET`  | `/healthz` | Liveness |
+| Method | Path                                | Purpose                                 |
+| ------ | ----------------------------------- | --------------------------------------- |
+| `POST` | `/api/v1/inventory/reserve`         | Atomically reserve stock (5-minute TTL) |
+| `POST` | `/api/v1/inventory/confirm`         | Commit an active reservation            |
+| `GET`  | `/api/v1/inventory/stock?item_id=…` | Real-time stock breakdown               |
+| `GET`  | `/healthz`                          | Liveness                                |
 
 ## TL;DR — three commands
 
@@ -42,12 +42,12 @@ docker run --rm --network indico_default -v "%cd%/backend:/src" -w /src golang:1
 
 ## Prerequisites
 
-| Tool | Why | Install hint |
-|---|---|---|
-| **Docker Desktop** (with WSL2 on Windows) | Runs Postgres + the backend & frontend | <https://docker.com/products/docker-desktop> |
-| **Go 1.25+** | Backend dev loop and tests (only if you want to run things natively) | `scoop install go` |
-| **Node 20+** | Frontend dev loop with Vite | <https://nodejs.org> |
-| **MinGW** (Windows only, optional) | `go test -race` needs CGO | `scoop install mingw` |
+| Tool                                      | Why                                                                  | Install hint                                 |
+| ----------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------- |
+| **Docker Desktop** (with WSL2 on Windows) | Runs Postgres + the backend & frontend                               | <https://docker.com/products/docker-desktop> |
+| **Go 1.25+**                              | Backend dev loop and tests (only if you want to run things natively) | `scoop install go`                           |
+| **Node 20+**                              | Frontend dev loop with Vite                                          | <https://nodejs.org>                         |
+| **MinGW** (Windows only, optional)        | `go test -race` needs CGO                                            | `scoop install mingw`                        |
 
 ## Running the backend
 
@@ -60,8 +60,9 @@ docker compose up -d --build
 ```
 
 This brings up three containers:
+
 - `indico_postgres` — PostgreSQL 16 on `localhost:5432`
-- `indico_backend`  — Gin server on `localhost:8080`
+- `indico_backend` — Gin server on `localhost:8080`
 - `indico_frontend` — nginx serving the Vite build on `localhost:5173`
 
 Tail the logs:
@@ -97,6 +98,7 @@ go run ./cmd/server
 ```
 
 You should see:
+
 ```
 {"time":"...","level":"INFO","msg":"migrations applied"}
 {"time":"...","level":"INFO","msg":"expiry sweeper started","interval":"15s"}
@@ -216,15 +218,15 @@ docker run --rm --network indico_default \
 
 ## Environment variables
 
-| Name | Default | Purpose |
-|---|---|---|
-| `DATABASE_URL` | `postgres://indico:indico@127.0.0.1:5432/indico?sslmode=disable` | Postgres connection string. The user and password **must match the user/password on your Postgres server** — if you connect with the wrong credentials, the embedded `pg_hba.conf` in this repo's docker image uses `trust` auth, so the connection will silently succeed as the default `postgres` superuser instead of failing. |
-| `PORT` | `8080` | HTTP listen port |
-| `RESERVATION_TTL` | `5m` | Time after which a reservation auto-expires |
-| `SWEEPER_INTERVAL` | `15s` | How often the background worker sweeps expired reservations |
-| `SHUTDOWN_TIMEOUT` | `10s` | Graceful shutdown window for in-flight requests |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Comma-separated list of browser origins allowed to call the API. Set this when deploying the frontend anywhere other than `localhost:5173`. |
-| `VITE_API_BASE_URL` | `http://localhost:8080` | Frontend → backend base URL (build-time) |
+| Name                   | Default                                                          | Purpose                                                                                                                                                                                                                                                                                                                           |
+| ---------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`         | `postgres://indico:indico@127.0.0.1:5432/indico?sslmode=disable` | Postgres connection string. The user and password **must match the user/password on your Postgres server** — if you connect with the wrong credentials, the embedded `pg_hba.conf` in this repo's docker image uses `trust` auth, so the connection will silently succeed as the default `postgres` superuser instead of failing. |
+| `PORT`                 | `8080`                                                           | HTTP listen port                                                                                                                                                                                                                                                                                                                  |
+| `RESERVATION_TTL`      | `5m`                                                             | Time after which a reservation auto-expires                                                                                                                                                                                                                                                                                       |
+| `SWEEPER_INTERVAL`     | `15s`                                                            | How often the background worker sweeps expired reservations                                                                                                                                                                                                                                                                       |
+| `SHUTDOWN_TIMEOUT`     | `10s`                                                            | Graceful shutdown window for in-flight requests                                                                                                                                                                                                                                                                                   |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173`                                          | Comma-separated list of browser origins allowed to call the API. Set this when deploying the frontend anywhere other than `localhost:5173`.                                                                                                                                                                                       |
+| `VITE_API_BASE_URL`    | `http://localhost:8080`                                          | Frontend → backend base URL (build-time)                                                                                                                                                                                                                                                                                          |
 
 ## Trying the API with curl
 

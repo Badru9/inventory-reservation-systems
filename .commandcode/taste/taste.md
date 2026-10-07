@@ -1,4 +1,10 @@
-- Project layout preference: separate `backend/` and `frontend/` directories at the repo root (not monorepo-style nested under one `app/`), each self-contained with its own `Dockerfile`, plus a top-level `docker-compose.yaml`, `Makefile`, `README.md`, `ARCHITECTURE.md`. Confidence: 0.7
+- When given a multi-part plan with open questions, answers terse and numbered ("1. pin to real versions / 2. add documentation ... / 3. yes"). Then explicitly adds scoping constraints ("u can, but divide to some git commits"). Expects the assistant to translate the numbered answers into scoped work, not to re-ask. Confidence: 0.8
+
+- Prefers changes split into multiple scoped git commits, one concern per commit, rather than a single omnibus commit. Explicit instruction: "u can, but divide to some git commits". Each commit should be self-contained (build green after each), with a clear conventional-commits style header (`chore(deps):`, `fix(config):`, `docs(readme):`) and a body explaining the why. Confidence: 0.9
+
+- Project layout preference: separate `backend/` and `frontend/` directories at the repo root (not monorepo-style nested under one `app/`), each self-contained with its own `Dockerfile`, plus a top-level `docker-compose.yaml`, top-level `README.md`, `ARCHITECTURE.md`. Note: the original line listed a `Makefile` as part of the layout, but the user has since deleted the Makefile from the repo — do not re-include `Makefile` in the canonical layout description. Confidence: 0.75
+
+- Treat quick clarification-style questions ("pertanyaan singkat, ...") as conversational and answer directly in the same register — short, concrete, with a real-world table when it helps. The user signaled "pertanyaan singkat" on a test-machinery question and accepted a concise PASS/SKIP-distinction answer with a markdown table. Confidence: 0.7
 
 - When the user's bug report or request is ambiguous (e.g. "there's an error in the UI, use heroui to fix it" without specifying which component), prefer asking a clarifying question with concrete options before diving into large changes. Use the `ask_user_question` tool with 3-4 mutually exclusive choices so they can pick fast. Confirmed by user picking "Rebuild full UI pakai HeroUI" from the options. Confidence: 0.9
 
