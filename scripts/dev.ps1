@@ -43,7 +43,9 @@ INDICO Flash-Sale - dev.ps1 targets
   test           run all tests (race detector)
   test-unit      unit tests only (no DB)
   test-integ     integration + stress tests against real Postgres
-  stress         run only the no-overselling stress test
+  stress         run only the no-overselling stress test (host)
+  stress-docker  run the stress test inside a one-shot container
+  test-docker    run the full test suite inside a one-shot container
   logs           tail container logs
   psql           open psql in the postgres container
 
@@ -79,6 +81,14 @@ Examples:
     "stress"    {
         Run "docker compose up -d postgres" | Out-Null
         Run "go test -race -v -count=1 -run TestStress_NoOverselling ./internal/repository/..." $Backend
+    }
+    "stress-docker" {
+        Run "docker compose up -d postgres" | Out-Null
+        Run "docker run --rm --network indico_default -v `"$RepoRoot\backend:/src`" -w /src golang:1.27-alpine sh -c `"apk add --no-cache gcc musl-dev >/dev/null && DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' go test -v -count=1 -run TestStress_NoOverselling ./internal/repository/...`""
+    }
+    "test-docker" {
+        Run "docker compose up -d postgres" | Out-Null
+        Run "docker run --rm --network indico_default -v `"$RepoRoot\backend:/src`" -w /src golang:1.27-alpine sh -c `"apk add --no-cache gcc musl-dev >/dev/null && DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' go test -v -count=1 ./...`""
     }
     "logs"      { Run "docker compose logs -f" }
     "psql"      { Run "docker exec -it indico_postgres psql -U indico -d indico" }

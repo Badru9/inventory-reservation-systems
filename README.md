@@ -10,7 +10,6 @@ High-concurrency inventory reservation system built with **Go + Gin + PostgreSQL
 | Database | PostgreSQL 16 |
 | Frontend | React 19, Vite 8, TypeScript, TanStack Query, axios |
 | Orchestration | Docker Compose — one command spins up the full stack |
-| Dev ergonomics | `Makefile` + `scripts/dev.ps1` for one-liner workflows |
 
 ## Endpoints
 
@@ -24,79 +23,96 @@ High-concurrency inventory reservation system built with **Go + Gin + PostgreSQL
 ## TL;DR — three commands
 
 ```bash
-# 1. Spin up Postgres + backend + frontend
-make up            # or: .\scripts\dev.ps1 up
+# 1. Start the full stack (postgres + backend + frontend)
+docker compose up -d --build
 
 # 2. Open the dashboard
 #    Frontend → http://localhost:5173
 #    Backend  → http://localhost:8080/healthz
 
 # 3. Run the test suite (unit + integration + 300-goroutine stress)
-make test          # or: .\scripts\dev.ps1 test
+docker compose up -d postgres
+docker run --rm --network indico_default -v "%cd%/backend:/src" -w /src golang:1.27-alpine ^
+  sh -c "apk add --no-cache gcc musl-dev >/dev/null && DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' go test -v -count=1 ./..."
 ```
-
-Run `make help` (or `.\scripts\dev.ps1 help`) for the full target list.
 
 ## Prerequisites
 
 | Tool | Why | Install hint |
 |---|---|---|
-| **Docker Desktop** (with WSL2 on Windows) | Runs Postgres + (optionally) the backend & frontend | <https://docker.com/products/docker-desktop> |
-| **Go 1.27+** | Backend dev loop, tests | `scoop install go` |
-| **Node 20+** | Frontend dev loop, Vite | <https://nodejs.org> |
-| **MinGW** (Windows only) | `go test -race` needs CGO | `scoop install mingw` |
-| **make** (optional) | Use the `Makefile` targets | `choco install make` or use `scripts\dev.ps1` instead |
+| **Docker Desktop** (with WSL2 on Windows) | Runs Postgres + the backend & frontend | <https://docker.com/products/docker-desktop> |
+| **Go 1.27+** | Backend dev loop and tests (only if you want to run things natively) | `scoop install go` |
+| **Node 20+** | Frontend dev loop with Vite | <https://nodejs.org> |
+| **MinGW** (Windows only, optional) | `go test -race` needs CGO | `scoop install mingw` |
 
-## Daily workflow (one-liners)
+## Running the backend
 
-### Using the Makefile (macOS / Linux / Windows-with-`make`)
+You have two options — the Docker path is the easiest, the native path is the fastest for a tight edit-run loop.
 
-| What you want | Command |
-|---|---|
-| Start the full stack | `make up` |
-| Start only Postgres (so you can run the backend natively) | `make db` |
-| Run the Go backend natively | `make backend` |
-| Run the Vite dev server | `make frontend` |
-| Run all tests (race detector) | `make test` |
-| Run only the no-overselling stress test | `make stress` |
-| Tail container logs | `make logs` |
-| Open psql in the Postgres container | `make psql` |
-| Stop the stack | `make down` |
-| Stop and wipe the Postgres volume | `make clean` |
+### Option A — Docker (recommended for first run)
 
-### Using `scripts\dev.ps1` (Windows, no `make` required)
+```bash
+docker compose up -d --build
+```
 
-| What you want | Command |
-|---|---|
-| Start the full stack | `.\scripts\dev.ps1 up` |
-| Start only Postgres | `.\scripts\dev.ps1 db` |
-| Run the Go backend natively | `.\scripts\dev.ps1 backend` |
-| Run the Vite dev server | `.\scripts\dev.ps1 frontend` |
-| Run all tests | `.\scripts\dev.ps1 test` |
-| Run only the stress test | `.\scripts\dev.ps1 stress` |
-| Stop the stack | `.\scripts\dev.ps1 down` |
+This brings up three containers:
+- `indico_postgres` — PostgreSQL 16 on `localhost:5432`
+- `indico_backend`  — Gin server on `localhost:8080`
+- `indico_frontend` — nginx serving the Vite build on `localhost:5173`
 
-## Manual setup (no `make` / `dev.ps1`)
+Tail the logs:
 
-If you'd rather run the commands yourself:
+```bash
+docker compose logs -f backend
+```
 
-### 1. Start the database
+Stop the stack:
+
+```bash
+docker compose down               # keep Postgres data
+docker compose down -v            # also wipe the Postgres volume
+```
+
+### Option B — backend native, Postgres in Docker
+
+This is the fastest dev loop — edits to Go files are picked up by `go run` on the next restart, and you skip rebuilding a container.
+
+**1. Start only Postgres:**
 
 ```bash
 docker compose up -d postgres
 ```
 
-### 2. Start the backend
+Wait until it's healthy (`docker ps` shows `(healthy)`).
+
+**2. Start the Go backend:**
 
 ```bash
 cd backend
-DATABASE_URL="postgres://indico:indico@127.0.0.1:5432/indico?sslmode=disable" \
-  go run ./cmd/server
+go run ./cmd/server
 ```
 
-The server listens on `:8080`, runs migrations on boot, and starts a background sweeper that releases expired reservations every 15 s.
+You should see:
+```
+{"time":"...","level":"INFO","msg":"migrations applied"}
+{"time":"...","level":"INFO","msg":"expiry sweeper started","interval":"15s"}
+{"time":"...","level":"INFO","msg":"server listening","addr":":8080"}
+```
 
-### 3. Start the frontend
+The server reads `DATABASE_URL` and `PORT` from the environment. Defaults:
+
+```
+DATABASE_URL=postgres://indico:indico@127.0.0.1:5432/indico?sslmode=disable
+PORT=8080
+```
+
+## Running the frontend
+
+### Option A — Docker
+
+Already running as part of `docker compose up -d --build`. Open <http://localhost:5173>.
+
+### Option B — Vite dev server (faster HMR)
 
 ```bash
 cd frontend
@@ -104,7 +120,7 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5173>. Vite reads `VITE_API_BASE_URL` from `.env.development` (already set to `http://localhost:8080`).
+Open <http://localhost:5173>. Vite reads `VITE_API_BASE_URL` from `frontend/.env.development` (already set to `http://localhost:8080`).
 
 ## Trying the dashboard
 
@@ -116,16 +132,82 @@ Open <http://localhost:5173>. Vite reads `VITE_API_BASE_URL` from `.env.developm
 
 To watch the expiry sweep at work, reserve a quantity and then leave the page open past the 5-minute mark. The countdown turns red, the reservation is auto-cleared, and `/stock` shows the units back in `available_stock`.
 
-## Stress / load testing
+## Testing the backend
 
-The integration test `TestStress_NoOverselling` fires 300 concurrent `Reserve` calls against 100 stock and asserts **exactly 100 succeed and 200 fail with `INSUFFICIENT_STOCK`** — the proof that `SELECT … FOR UPDATE` keeps the system correct under contention.
+The test suite has two layers: **unit tests** (no DB needed) and **integration + stress tests** (real Postgres).
 
-Run it on its own:
+### Unit tests (native)
 
 ```bash
-make stress                              # or: .\scripts\dev.ps1 stress
-# or
-cd backend && DATABASE_URL=... go test -race -v -count=1 -run TestStress_NoOverselling ./internal/repository/...
+cd backend
+go test -race -v -count=1 ./internal/service/...
+```
+
+On Windows, `go test -race` needs a C compiler. If you have MinGW:
+
+```bash
+set PATH=C:\Users\RIVAN\scoop\apps\mingw\current\bin;%PATH%
+go test -race -v -count=1 ./internal/service/...
+```
+
+### Integration + stress tests (native)
+
+```bash
+docker compose up -d postgres
+cd backend
+set DATABASE_URL=postgres://indico:indico@127.0.0.1:5432/indico?sslmode=disable
+go test -v -count=1 ./internal/repository/...
+```
+
+> **Windows + Docker Desktop caveat:** host connections to `127.0.0.1:5432` are routed through the WSL2 NAT layer, which Postgres sees as a non-loopback IP and rejects with `password authentication failed`. The unit tests still work because they don't need a real DB, but the integration tests should be run via the Docker path below when you're on Windows.
+
+### Integration + stress tests (Docker — works on every OS)
+
+This runs the test binary inside a one-shot Go container attached to the `indico_default` network, so the connection comes from a real docker IP and the trust `pg_hba.conf` rule applies.
+
+**Linux / macOS / Git Bash:**
+
+```bash
+docker compose up -d postgres
+docker run --rm --network indico_default \
+  -v "$PWD/backend:/src" -w /src golang:1.27-alpine \
+  sh -c "apk add --no-cache gcc musl-dev >/dev/null && \
+         DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' \
+         go test -v -count=1 ./..."
+```
+
+**Windows (cmd):**
+
+```cmd
+docker compose up -d postgres
+docker run --rm --network indico_default -v "%cd%\backend:/src" -w /src golang:1.27-alpine ^
+  sh -c "apk add --no-cache gcc musl-dev >/dev/null && DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' go test -v -count=1 ./..."
+```
+
+**Windows (PowerShell):**
+
+```powershell
+docker compose up -d postgres
+docker run --rm --network indico_default -v "${PWD}/backend:/src" -w /src golang:1.27-alpine `
+  sh -c "apk add --no-cache gcc musl-dev >/dev/null && DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' go test -v -count=1 ./..."
+```
+
+### Stress test in isolation
+
+`TestStress_NoOverselling` fires 300 concurrent `Reserve` calls against 100 stock and asserts **exactly 100 succeed and 200 fail with `INSUFFICIENT_STOCK`** — the proof that `SELECT … FOR UPDATE` keeps the system correct under contention.
+
+Add `-run TestStress_NoOverselling` to any of the commands above:
+
+```bash
+# Native
+go test -v -count=1 -run TestStress_NoOverselling ./internal/repository/...
+
+# Docker
+docker run --rm --network indico_default \
+  -v "$PWD/backend:/src" -w /src golang:1.27-alpine \
+  sh -c "apk add --no-cache gcc musl-dev >/dev/null && \
+         DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' \
+         go test -v -count=1 -run TestStress_NoOverselling ./internal/repository/..."
 ```
 
 ## Environment variables
@@ -139,7 +221,42 @@ cd backend && DATABASE_URL=... go test -race -v -count=1 -run TestStress_NoOvers
 | `SHUTDOWN_TIMEOUT` | `10s` | Graceful shutdown window for in-flight requests |
 | `VITE_API_BASE_URL` | `http://localhost:8080` | Frontend → backend base URL (build-time) |
 
-The `Makefile` and `dev.ps1` already set `DATABASE_URL` and `PORT` for you.
+## Trying the API with curl
+
+```bash
+# Health
+curl http://localhost:8080/healthz
+
+# Stock for an item
+curl "http://localhost:8080/api/v1/inventory/stock?item_id=item_4021"
+
+# Reserve 2 units
+curl -X POST http://localhost:8080/api/v1/inventory/reserve \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":"usr_9981","item_id":"item_4021","quantity":2}'
+
+# Confirm (paste the reservation_id from the response above)
+curl -X POST http://localhost:8080/api/v1/inventory/confirm \
+  -H "Content-Type: application/json" \
+  -d '{"reservation_id":"res_XXXXXX"}'
+```
+
+Negative cases worth trying:
+
+```bash
+# Item that does not exist → 404 NOT_FOUND
+curl -i "http://localhost:8080/api/v1/inventory/stock?item_id=does_not_exist"
+
+# Reservation that does not exist → 404 NOT_FOUND
+curl -i -X POST http://localhost:8080/api/v1/inventory/confirm \
+  -H "Content-Type: application/json" \
+  -d '{"reservation_id":"res_nope"}'
+
+# Quantity larger than stock → 409 INSUFFICIENT_STOCK with available/requested in details
+curl -i -X POST http://localhost:8080/api/v1/inventory/reserve \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":"usr_9981","item_id":"item_4021","quantity":9999}'
+```
 
 ## Layout
 
@@ -163,10 +280,7 @@ The `Makefile` and `dev.ps1` already set `DATABASE_URL` and `PORT` for you.
 │   │   └── App.tsx
 │   ├── Dockerfile
 │   └── nginx.conf
-├── scripts/
-│   └── dev.ps1             # PowerShell wrapper for Make targets
 ├── docker-compose.yaml     # one command: full stack
-├── Makefile                # one-liner dev / test / deploy targets
 ├── ARCHITECTURE.md         # design defense
 └── README.md
 ```

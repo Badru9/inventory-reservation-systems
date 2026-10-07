@@ -28,7 +28,7 @@ endif
 export DATABASE_URL
 export PORT
 
-.PHONY: help up down clean db backend frontend test test-unit test-integration stress logs psql shell-backend shell-frontend build
+.PHONY: help up down clean db backend frontend test test-unit test-integration test-docker stress stress-docker logs psql shell-backend shell-frontend build
 
 help: ## show this help
 	@echo INDICO Flash-Sale - Make targets
@@ -68,8 +68,16 @@ test-unit: ## unit tests, no DB needed
 test-integration: db ## integration + stress tests against real Postgres
 	cd $(BACKEND_DIR) && go test -race -v -count=1 ./internal/repository/...
 
-stress: db ## run only the no-overselling stress test
+stress: db ## run only the no-overselling stress test (from host, requires CGO + reachable Postgres)
 	cd $(BACKEND_DIR) && go test -race -v -count=1 -run TestStress_NoOverselling ./internal/repository/...
+
+stress-docker: db ## run the stress test inside a one-shot container (no host CGO / no WSL networking hassles)
+	docker run --rm --network indico_default -v "${CURDIR}/${BACKEND_DIR}:/src" -w /src golang:1.27-alpine \
+		sh -c "apk add --no-cache gcc musl-dev >/dev/null && DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' go test -v -count=1 -run TestStress_NoOverselling ./internal/repository/..."
+
+test-docker: db ## run the full test suite inside a one-shot container (CI-friendly)
+	docker run --rm --network indico_default -v "${CURDIR}/${BACKEND_DIR}:/src" -w /src golang:1.27-alpine \
+		sh -c "apk add --no-cache gcc musl-dev >/dev/null && DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' go test -v -count=1 ./..."
 
 logs: ## tail all container logs
 	docker compose logs -f
