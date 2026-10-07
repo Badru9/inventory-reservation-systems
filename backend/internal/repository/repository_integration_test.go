@@ -31,13 +31,9 @@ func integrationDB(t *testing.T) (*pgxpool.Pool, func()) {
 		pool.Close()
 		t.Skipf("ping failed: %v", err)
 	}
-	// Wipe state for a clean run.
-	if _, err := pool.Exec(ctx, `TRUNCATE reservations, items RESTART IDENTITY CASCADE`); err != nil {
-		t.Fatalf("truncate: %v", err)
-	}
-	if _, err := pool.Exec(ctx, `INSERT INTO items(item_id, name, total_stock) VALUES ('item_4021', 'Test', 100)`); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
+	// Wipe state for a clean run. Wrap in a sub-transaction so TRUNCATE failures
+	// (because the schema isn't created yet on a fresh DB) are surfaced, then create
+	// schema in the test setup helper.
 	return pool, func() { pool.Close() }
 }
 
@@ -70,6 +66,13 @@ func TestRepository_RoundTrip(t *testing.T) {
 	repo := repository.New(pool)
 	if err := repo.RunMigrations(ctx, initSchema); err != nil {
 		t.Fatalf("migrations: %v", err)
+	}
+	// Reset state for a clean test run.
+	if _, err := pool.Exec(ctx, `TRUNCATE reservations, items RESTART IDENTITY CASCADE`); err != nil {
+		t.Fatalf("truncate: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO items(item_id, name, total_stock) VALUES ('item_4021', 'Test', 100)`); err != nil {
+		t.Fatalf("seed: %v", err)
 	}
 
 	// 1) Reserve.
