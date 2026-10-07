@@ -6,9 +6,9 @@ High-concurrency inventory reservation system built with **Go + Gin + PostgreSQL
 
 | Layer | Tech |
 |---|---|
-| Backend | Go 1.27, Gin, pgx/v5, embedded SQL migrations |
+| Backend | Go 1.25, Gin, pgx/v5, embedded SQL migrations |
 | Database | PostgreSQL 16 |
-| Frontend | React 19, Vite 8, TypeScript, TanStack Query, axios |
+| Frontend | React 19, Vite 5, TypeScript 5.8, TanStack Query, axios, HeroUI v3 (Tailwind v4) |
 | Orchestration | Docker Compose — one command spins up the full stack |
 
 ## Endpoints
@@ -32,7 +32,7 @@ docker compose up -d --build
 
 # 3. Run the test suite (unit + integration + 300-goroutine stress)
 docker compose up -d postgres
-docker run --rm --network indico_default -v "%cd%/backend:/src" -w /src golang:1.27-alpine ^
+docker run --rm --network indico_default -v "%cd%/backend:/src" -w /src golang:1.25-alpine ^
   sh -c "apk add --no-cache gcc musl-dev >/dev/null && DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' go test -v -count=1 ./..."
 ```
 
@@ -41,7 +41,7 @@ docker run --rm --network indico_default -v "%cd%/backend:/src" -w /src golang:1
 | Tool | Why | Install hint |
 |---|---|---|
 | **Docker Desktop** (with WSL2 on Windows) | Runs Postgres + the backend & frontend | <https://docker.com/products/docker-desktop> |
-| **Go 1.27+** | Backend dev loop and tests (only if you want to run things natively) | `scoop install go` |
+| **Go 1.25+** | Backend dev loop and tests (only if you want to run things natively) | `scoop install go` |
 | **Node 20+** | Frontend dev loop with Vite | <https://nodejs.org> |
 | **MinGW** (Windows only, optional) | `go test -race` needs CGO | `scoop install mingw` |
 
@@ -170,7 +170,7 @@ This runs the test binary inside a one-shot Go container attached to the `indico
 ```bash
 docker compose up -d postgres
 docker run --rm --network indico_default \
-  -v "$PWD/backend:/src" -w /src golang:1.27-alpine \
+  -v "$PWD/backend:/src" -w /src golang:1.25-alpine \
   sh -c "apk add --no-cache gcc musl-dev >/dev/null && \
          DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' \
          go test -v -count=1 ./..."
@@ -180,7 +180,7 @@ docker run --rm --network indico_default \
 
 ```cmd
 docker compose up -d postgres
-docker run --rm --network indico_default -v "%cd%\backend:/src" -w /src golang:1.27-alpine ^
+docker run --rm --network indico_default -v "%cd%\backend:/src" -w /src golang:1.25-alpine ^
   sh -c "apk add --no-cache gcc musl-dev >/dev/null && DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' go test -v -count=1 ./..."
 ```
 
@@ -188,7 +188,7 @@ docker run --rm --network indico_default -v "%cd%\backend:/src" -w /src golang:1
 
 ```powershell
 docker compose up -d postgres
-docker run --rm --network indico_default -v "${PWD}/backend:/src" -w /src golang:1.27-alpine `
+docker run --rm --network indico_default -v "${PWD}/backend:/src" -w /src golang:1.25-alpine `
   sh -c "apk add --no-cache gcc musl-dev >/dev/null && DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' go test -v -count=1 ./..."
 ```
 
@@ -204,7 +204,7 @@ go test -v -count=1 -run TestStress_NoOverselling ./internal/repository/...
 
 # Docker
 docker run --rm --network indico_default \
-  -v "$PWD/backend:/src" -w /src golang:1.27-alpine \
+  -v "$PWD/backend:/src" -w /src golang:1.25-alpine \
   sh -c "apk add --no-cache gcc musl-dev >/dev/null && \
          DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' \
          go test -v -count=1 -run TestStress_NoOverselling ./internal/repository/..."
