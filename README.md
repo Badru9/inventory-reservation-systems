@@ -34,6 +34,10 @@ docker compose up -d --build
 docker compose up -d postgres
 docker run --rm --network indico_default -v "%cd%/backend:/src" -w /src golang:1.25-alpine ^
   sh -c "apk add --no-cache gcc musl-dev >/dev/null && DATABASE_URL='postgres://indico:indico@indico_postgres:5432/indico?sslmode=disable' go test -v -count=1 ./..."
+# Note: the network name `indico_default` is `<project>_default` where
+# `<project>` is the directory you ran `docker compose` from. If you
+# cloned into a differently-named directory, check `docker network ls` and
+# replace `indico_default` with the actual name.
 ```
 
 ## Prerequisites
@@ -214,11 +218,12 @@ docker run --rm --network indico_default \
 
 | Name | Default | Purpose |
 |---|---|---|
-| `DATABASE_URL` | `postgres://indico:indico@127.0.0.1:5432/indico?sslmode=disable` | Postgres connection string |
+| `DATABASE_URL` | `postgres://indico:indico@127.0.0.1:5432/indico?sslmode=disable` | Postgres connection string. The user and password **must match the user/password on your Postgres server** — if you connect with the wrong credentials, the embedded `pg_hba.conf` in this repo's docker image uses `trust` auth, so the connection will silently succeed as the default `postgres` superuser instead of failing. |
 | `PORT` | `8080` | HTTP listen port |
 | `RESERVATION_TTL` | `5m` | Time after which a reservation auto-expires |
 | `SWEEPER_INTERVAL` | `15s` | How often the background worker sweeps expired reservations |
 | `SHUTDOWN_TIMEOUT` | `10s` | Graceful shutdown window for in-flight requests |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Comma-separated list of browser origins allowed to call the API. Set this when deploying the frontend anywhere other than `localhost:5173`. |
 | `VITE_API_BASE_URL` | `http://localhost:8080` | Frontend → backend base URL (build-time) |
 
 ## Trying the API with curl
