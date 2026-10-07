@@ -1,9 +1,25 @@
-# User Taste Learnings
+- Project layout preference: separate `backend/` and `frontend/` directories at the repo root (not monorepo-style nested under one `app/`), each self-contained with its own `Dockerfile`, plus a top-level `docker-compose.yaml`, `Makefile`, `README.md`, `ARCHITECTURE.md`. Confidence: 0.7
+
+- When the user's bug report or request is ambiguous (e.g. "there's an error in the UI, use heroui to fix it" without specifying which component), prefer asking a clarifying question with concrete options before diving into large changes. Use the `ask_user_question` tool with 3-4 mutually exclusive choices so they can pick fast. Confirmed by user picking "Rebuild full UI pakai HeroUI" from the options. Confidence: 0.9
+
+- Wants the assistant to proactively use available skills/extensions when relevant. Explicitly asked: "jika ada skill yang perlu digunakan untuk menyelesaikan ini, coba gunakan" — and the `heroui-react` skill activation was followed by a faster, more correct implementation. Before tackling a task, scan for applicable skills and activate them. Confidence: 0.9
+
+- Prefers the assistant to fetch official documentation for any unfamiliar library/component API before writing code against it — even when the assistant believes it already knows the API. Pattern: multiple `web_fetch` calls to heroui.com docs (Select, TextField, Input, Card, Button, Chip, Dark theme, Theming) before any component code was written. This avoids hallucinated prop names like `color="primary" variant="flat"` that don't exist in the real API. Confidence: 0.85
+
+- Prefers a systematic, transparent approach to multi-step tasks: use `todo_write` to lay out the sub-tasks at the start, mark them `in_progress` / `completed` as work progresses, so the user can see what's left. Pattern from the HeroUI migration: 7-item todo list (install → CSS → App.tsx → StockCard → ReservationForm → active components → rebuild) used throughout. Confidence: 0.85
+
+- After making infrastructure changes, verify the result end-to-end with concrete checks (e.g. `curl -o /dev/null -w '%{http_code}'` on both frontend and backend ports, `docker ps` to confirm container health) and report the results in the final summary. Don't just say "done" — show the green check from the verification commands. Confidence: 0.8
+
+- Prefers modern compound-component UI library APIs (e.g. HeroUI v3's `Card.Header` / `Card.Title` / `Card.Description` / `Card.Content` / `Card.Footer`, `Select.Trigger` / `Select.Value` / `Select.Indicator` / `Select.Popover` / `ListBox.Item`) over flat single-element components. Also prefers `onPress` over `onClick`, `isPending` over manual loading state, `isDisabled` over `disabled` — the semantic React API names over the HTML attribute names. Confidence: 0.8
+
+- Prefers semantic CSS variable theme tokens (`text-muted`, `text-success`, `text-warning`, `text-danger`, `bg-surface-secondary`, `border-border`) over hardcoded color classes (no `text-gray-500`, no arbitrary hex values). When migrating to a new design system, reach for the design system's semantic tokens. Confidence: 0.8# User Taste Learnings
 
 - Communicates in Bahasa Indonesia (Indonesian) — respond in Indonesian unless they switch to English. Comfortably code-switches to English mid-session; follow the language of the most recent user message. Confidence: 0.9
 
 - Prefers documentation over wrapper tooling: for project onboarding, put all commands directly in `README.md` (Docker / native paths, separate cmd / PowerShell / bash snippets for Windows variants) rather than shipping a `Makefile` + `scripts/dev.ps1` wrapper layer. Explicitly reversed an earlier Makefile + dev.ps1 approach in favor of README docs ("revert the makefile, and delete it. i think its better to just give the documentation for backend and frontend on README.md"). Confidence: 0.9
 
 - README/docs should be written for a fresh developer joining the project, not as a post-hoc description of what was built. Include: prerequisites with install hints, a 3-command TL;DR, environment-variable table, daily-workflow table, manual fallback for users without the one-liner tooling. Confidence: 0.85
+
+- Comfortable running services outside Docker for faster iteration — explicitly asked "how do i run backend service? without docker" and accepted the hybrid answer (Postgres in Docker + backend via `go run ./cmd/server` native). The default mental model is "what's the smallest hybrid that keeps deps happy" rather than "everything must be in docker-compose". Confidence: 0.75
 
 - Project layout preference: separate `backend/` and `frontend/` directories at the repo root (not monorepo-style nested under one `app/`), each self-contained with its own `Dockerfile`, plus a top-level `docker-compose.yaml`, `Makefile`, `README.md`, `ARCHITECTURE.md`. Confidence: 0.7

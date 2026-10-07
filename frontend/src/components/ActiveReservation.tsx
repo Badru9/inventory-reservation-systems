@@ -1,56 +1,76 @@
 import { useState, useEffect } from "react";
+import { Button, Card, Description, Label } from "@heroui/react";
 import { CountdownTimer } from "./CountdownTimer";
 import { ConfirmButton } from "./ConfirmButton";
 
 interface ActiveReservationProps {
-  reservationId: string;
-  itemId: string;
-  quantity: number;
-  expiresAt: string;
-  onCleared: () => void;
+	reservationId: string;
+	itemId: string;
+	quantity: number;
+	expiresAt: string;
+	onCleared: () => void;
 }
 
 export function ActiveReservation({
-  reservationId,
-  itemId,
-  quantity,
-  expiresAt,
-  onCleared,
+	reservationId,
+	itemId,
+	quantity,
+	expiresAt,
+	onCleared,
 }: ActiveReservationProps) {
-  const [expired, setExpired] = useState(false);
+	const [expired, setExpired] = useState(false);
 
-  // Auto-clear 2s after expiry so the panel reverts to a clean form.
-  useEffect(() => {
-    if (!expired) return;
-    const t = setTimeout(onCleared, 2000);
-    return () => clearTimeout(t);
-  }, [expired, onCleared]);
+	useEffect(() => {
+		if (!expired) return;
+		const t = setTimeout(onCleared, 2000);
+		return () => clearTimeout(t);
+	}, [expired, onCleared]);
 
-  return (
-    <section className="card reservation-card">
-      <header className="card-header">
-        <h2>Active Reservation</h2>
-      </header>
-      <dl className="reservation-meta">
-        <div>
-          <dt>Reservation ID</dt>
-          <dd className="mono">{reservationId}</dd>
-        </div>
-        <div>
-          <dt>Item</dt>
-          <dd className="mono">{itemId}</dd>
-        </div>
-        <div>
-          <dt>Quantity</dt>
-          <dd>{quantity}</dd>
-        </div>
-      </dl>
-      <CountdownTimer expiresAt={expiresAt} onExpire={() => setExpired(true)} />
-      <ConfirmButton reservationId={reservationId} disabled={expired} />
-      {expired && <p className="error">Reservation expired — please reserve again.</p>}
-      <button className="btn-link" onClick={onCleared}>
-        Discard
-      </button>
-    </section>
-  );
+	return (
+		<Card>
+			<Card.Header className="flex-row items-center justify-between">
+				<div>
+					<Card.Title>Active Reservation</Card.Title>
+					<Card.Description>
+						Units are locked server-side until expiry or confirmation.
+					</Card.Description>
+				</div>
+				<Button size="sm" variant="ghost" onPress={onCleared}>
+					Discard
+				</Button>
+			</Card.Header>
+
+			<Card.Content className="flex flex-col gap-4">
+				<dl className="flex flex-col gap-3">
+					<Meta label="Reservation ID" value={reservationId} mono />
+					<Meta label="Item" value={itemId} mono />
+					<Meta label="Quantity" value={String(quantity)} />
+				</dl>
+
+				<CountdownTimer expiresAt={expiresAt} onExpire={() => setExpired(true)} />
+
+				{expired ? (
+					<Description className="text-danger">
+						Reservation expired — please reserve again.
+					</Description>
+				) : (
+					<ConfirmButton reservationId={reservationId} />
+				)}
+			</Card.Content>
+		</Card>
+	);
+}
+
+function Meta({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+	return (
+		<div className="flex items-baseline justify-between gap-3">
+			<Label className="text-muted text-xs uppercase tracking-wider">{label}</Label>
+			<dd
+				className={`text-sm ${mono ? "font-mono" : ""}`}
+				style={{ margin: 0 }}
+			>
+				{value}
+			</dd>
+		</div>
+	);
 }

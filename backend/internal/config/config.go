@@ -17,7 +17,7 @@ type Config struct {
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		DatabaseURL:     getEnv("DATABASE_URL", "postgres://indico:indico@localhost:5432/indico?sslmode=disable"),
+		DatabaseURL:     getEnv("DATABASE_URL", "postgres://postgres:123456@localhost:5432/indico?sslmode=disable"),
 		Port:            getEnv("PORT", "8080"),
 		ReservationTTL:  getDurationEnv("RESERVATION_TTL", 5*time.Minute),
 		SweeperInterval: getDurationEnv("SWEEPER_INTERVAL", 15*time.Second),
